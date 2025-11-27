@@ -71,8 +71,26 @@ class Sa2VAModel(BaseModel):
 
         if pretrained_pth is not None:
             pretrained_state_dict = guess_load_checkpoint(pretrained_pth)
-            self.load_state_dict(pretrained_state_dict, strict=False)
+            # Filter out mismatched keys
+            model_state_dict = self.state_dict()
+            filtered_state_dict = {}
+            skipped_keys = []
+            
+            for k, v in pretrained_state_dict.items():
+                if k in model_state_dict:
+                    if v.shape == model_state_dict[k].shape:
+                        filtered_state_dict[k] = v
+                    else:
+                        skipped_keys.append(f"{k}: checkpoint shape {v.shape} vs model shape {model_state_dict[k].shape}")
+                        
+            self.load_state_dict(filtered_state_dict, strict=False)
             print(f'Load pretrained weight from {pretrained_pth}')
+            if skipped_keys:
+                print(f'Skipped {len(skipped_keys)} mismatched keys due to shape mismatch:')
+                for key in skipped_keys[:10]:  # Show first 10
+                    print(f'  - {key}')
+                if len(skipped_keys) > 10:
+                    print(f'  ... and {len(skipped_keys) - 10} more')
 
         self.loss_sample_points = loss_sample_points
         self.num_points = num_points

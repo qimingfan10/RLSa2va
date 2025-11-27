@@ -48,12 +48,13 @@ def load_checkpoint_with_prefix(filename, prefix=None, map_location='cpu', logge
     return state_dict
 
 
-def load_state_dict_to_model(model, state_dict,  logger='current'):
-    missing_keys, unexpected_keys = model.load_state_dict(state_dict)
+def load_state_dict_to_model(model, state_dict,  logger='current', strict=True):
+    missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
     if missing_keys:
-        print_log(missing_keys, logger=logger, level=logging.ERROR)
-        raise RuntimeError()
+        print_log(f"Missing keys: {missing_keys}", logger=logger, level=logging.WARNING)
+        if strict:
+            raise RuntimeError("Missing keys in checkpoint")
     if unexpected_keys:
-        print_log(unexpected_keys, logger=logger, level=logging.ERROR)
-        raise RuntimeError()
+        print_log(f"Unexpected keys (will be ignored): {unexpected_keys}", logger=logger, level=logging.WARNING)
+        # Don't raise error for unexpected keys - this allows loading SAM2.1 weights into SAM2.0 model
     print_log("Loaded checkpoint successfully", logger=logger)

@@ -52,7 +52,7 @@ class SAM2TrainRunner(BaseModule):
         OmegaConf.resolve(cfg)
         sam2_model = instantiate(cfg.model, _recursive_=True)
         state_dict = load_checkpoint_with_prefix(os.path.join(BASE_DIR, ckpt_path))
-        load_state_dict_to_model(sam2_model, state_dict)
+        load_state_dict_to_model(sam2_model, state_dict, strict=False)
 
         self.sam2_model = sam2_model
 

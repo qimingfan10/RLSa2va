@@ -91,6 +91,14 @@ class Sa2VAFinetuneDataset(RefCocoDataset, Sa2VABaseDataset):
 
         masks, phrases = [], []
         mask, text = ann_info['mask'], ann_info['text']
+        
+        # Validate that mask and text have the same length
+        if len(mask) != len(text):
+            print(f"Warning: mask length ({len(mask)}) != text length ({len(text)}) for image {ann_info.get('img_path', 'unknown')}")
+            # Use the minimum length to avoid index errors
+            min_len = min(len(mask), len(text))
+            mask = mask[:min_len]
+            text = text[:min_len]
 
         for idx in range(len(mask)):
             obj_mask = mask[idx]
@@ -99,11 +107,35 @@ class Sa2VAFinetuneDataset(RefCocoDataset, Sa2VABaseDataset):
                 phrase = phrase[:-1]
             phrases.append(phrase)
             binary_mask = np.zeros((height, width), dtype=np.uint8)
+            
+            # obj_mask is a list of polygons, where each polygon is a list of coordinates
+            # If obj_mask is already a single polygon (list of numbers), wrap it
+            if obj_mask and isinstance(obj_mask[0], (int, float)):
+                # Single polygon: [x1, y1, x2, y2, ...]
+                obj_mask = [obj_mask]
+            
             for seg in obj_mask:
-                rles = mask_utils.frPyObjects([seg], height, width)
-                m = mask_utils.decode(rles)
-                m = m.astype(np.uint8)
-                binary_mask += m.squeeze()
+                # seg should be a list of coordinates [x1, y1, x2, y2, ...]
+                if isinstance(seg, list) and len(seg) > 0:
+                    try:
+                        # 确保seg是纯Python list，不是numpy array或其他类型
+                        # 转换为float list以确保兼容性
+                        seg_clean = [float(x) for x in seg]
+                        rles = mask_utils.frPyObjects([seg_clean], height, width)
+                        m = mask_utils.decode(rles)
+                        m = m.astype(np.uint8)
+                        binary_mask += m.squeeze()
+                    except Exception as e:
+                        print(f"ERROR processing mask for {image_path}")
+                        print(f"  seg type: {type(seg)}")
+                        print(f"  seg length: {len(seg)}")
+                        print(f"  seg[:4]: {seg[:4] if len(seg) >= 4 else seg}")
+                        print(f"  seg_clean type: {type(seg_clean)}")
+                        print(f"  seg_clean[:4]: {seg_clean[:4] if len(seg_clean) >= 4 else seg_clean}")
+                        print(f"  height: {height}, width: {width}")
+                        print(f"  Error: {e}")
+                        # 跳过这个mask，继续处理
+                        continue
             masks.append(binary_mask)
 
         conversation = []

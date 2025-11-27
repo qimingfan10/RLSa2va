@@ -72,19 +72,20 @@ def main():
     all_state_dict_new = {}
 
     # build the hf format model
-    from projects.sa2va.hf.models.configuration_sa2va_chat import Sa2VAChatConfig
-    from projects.sa2va.hf.models.modeling_sa2va_chat import Sa2VAChatModel
-
-    if 'qwen3' in cfg.path.lower():
-        from projects.sa2va.hf.models_qwen3vl.configuration_sa2va_chat import Sa2VAChatConfigQwen
-        from projects.sa2va.hf.models_qwen3vl.modeling_sa2va_qwen import Sa2VAChatModelQwen
-    else:
-        from projects.sa2va.hf.models_qwen2_5_vl.configuration_sa2va_chat import Sa2VAChatConfigQwen
-        from projects.sa2va.hf.models_qwen2_5_vl.modeling_sa2va_qwen import Sa2VAChatModelQwen
-
     arch_type = cfg.model.get('arch_type', 'internvl')
     print("arch_type:", arch_type)
     print(cfg.model)
+    
+    from projects.sa2va.hf.models.configuration_sa2va_chat import Sa2VAChatConfig
+    from projects.sa2va.hf.models.modeling_sa2va_chat import Sa2VAChatModel
+
+    if 'qwen' in arch_type:
+        if 'qwen3' in cfg.path.lower():
+            from projects.sa2va.hf.models_qwen3vl.configuration_sa2va_chat import Sa2VAChatConfigQwen
+            from projects.sa2va.hf.models_qwen3vl.modeling_sa2va_qwen import Sa2VAChatModelQwen
+        else:
+            from projects.sa2va.hf.models_qwen2_5_vl.configuration_sa2va_chat import Sa2VAChatConfigQwen
+            from projects.sa2va.hf.models_qwen2_5_vl.modeling_sa2va_qwen import Sa2VAChatModelQwen
 
     if 'qwen' not in arch_type:
         config = Sa2VAChatConfig.from_pretrained(cfg.path)
