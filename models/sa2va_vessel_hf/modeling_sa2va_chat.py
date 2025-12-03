@@ -360,6 +360,9 @@ class Sa2VAChatModel(PreTrainedModel):
         input_ids = input_ids.reshape(B * N)
         selected = (input_ids == self.img_context_token_id)
 
+        # 使用clone避免in-place操作
+        input_embeds = input_embeds.clone()
+        
         if vp_embeds is None:
             try:
                 input_embeds[selected] = vit_embeds.reshape(-1, C)
@@ -431,7 +434,7 @@ class Sa2VAChatModel(PreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    @torch.no_grad()
+    # @torch.no_grad()  # 注释掉以支持训练时的梯度回传
     def generate(
             self,
             pixel_values: Optional[torch.FloatTensor] = None,
@@ -497,6 +500,10 @@ class Sa2VAChatModel(PreTrainedModel):
             input_ids = input_ids.reshape(B * N)
             selected = (input_ids == self.img_context_token_id)
             assert selected.sum() != 0
+            
+            # 使用clone避免in-place操作
+            input_embeds = input_embeds.clone()
+            
             if vp_embeds is None:
                 input_embeds[selected] = vit_embeds.reshape(-1, C).to(input_embeds.device)
             else:
@@ -595,6 +602,7 @@ class Sa2VAChatModel(PreTrainedModel):
             mask_prompts=None,
             tokenizer=None,
             processor=None,
+            return_tensors=False,
     ):
         if not self.init_prediction_config:
             assert tokenizer
@@ -757,6 +765,8 @@ class Sa2VAChatModel(PreTrainedModel):
         )
         all_seg_hidden_states = self.text_hidden_fcs(seg_hidden_states)
 
+        ret_probs = []  # 新增：保存概率图
+        
         for seg_hidden_states in all_seg_hidden_states:
             seg_hidden_states = seg_hidden_states.unsqueeze(0)
             g_pixel_values = input_dict['g_pixel_values']
@@ -765,11 +775,20 @@ class Sa2VAChatModel(PreTrainedModel):
             w, h = ori_image_size
             masks = F.interpolate(pred_masks, size=(h, w), mode='bilinear', align_corners=False)
             masks = masks[:, 0]
-            masks = masks.sigmoid() > 0.5
-            masks = masks.cpu().numpy()
-            ret_masks.append(masks)
+            
+            # 修改：保存概率图和二值化mask
+            prob_maps = masks.sigmoid()  # 概率图 [0, 1]
+            binary_masks = prob_maps > 0.5  # 二值化mask
+            
+            # 根据return_tensors参数决定是否转换为numpy
+            if not return_tensors:
+                prob_maps = prob_maps.cpu().numpy()
+                binary_masks = binary_masks.cpu().numpy()
+            
+            ret_probs.append(prob_maps)  # 新增
+            ret_masks.append(binary_masks)
 
-        return {'prediction': predict, 'prediction_masks': ret_masks,}
+        return {'prediction': predict, 'prediction_masks': ret_masks, 'probability_maps': ret_probs}
 
 def get_seg_hidden_states(hidden_states, output_ids, seg_id):
     seg_mask = output_ids == seg_id
@@ -877,7 +896,7 @@ def prepare_inputs_for_generation_phi3(
     if attention_mask is not None and position_ids is None:
         # create position_ids on the fly for batch generation
         position_ids = attention_mask.long().cumsum(-1) - 1
-        position_ids.masked_fill_(attention_mask == 0, 1)
+        position_ids = position_ids.masked_fill(attention_mask == 0, 1)  # 改为非in-place
         if past_key_values:
             position_ids = position_ids[:, -input_ids.shape[1]:]
 

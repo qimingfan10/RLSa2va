@@ -1688,7 +1688,7 @@ class PositionEmbeddingSine(nn.Module):
         ).flatten(1)
         return pos_x, pos_y
 
-    @torch.no_grad()
+    # REMOVED for training
     def encode_boxes(self, x, y, w, h):
         pos_x, pos_y = self._encode_xy(x, y)
         pos = torch.cat((pos_y, pos_x, h[:, None], w[:, None]), dim=1)
@@ -1696,7 +1696,7 @@ class PositionEmbeddingSine(nn.Module):
 
     encode = encode_boxes  # Backwards compatibility
 
-    @torch.no_grad()
+    # REMOVED for training
     def encode_points(self, x, y, labels):
         (bx, nx), (by, ny), (bl, nl) = x.shape, y.shape, labels.shape
         assert bx == by and nx == ny and bx == bl and nx == nl
@@ -1705,7 +1705,7 @@ class PositionEmbeddingSine(nn.Module):
         pos = torch.cat((pos_y, pos_x, labels[:, :, None]), dim=2)
         return pos
 
-    @torch.no_grad()
+    # REMOVED for training
     def forward(self, x: torch.Tensor):
         cache_key = (x.shape[-2], x.shape[-1])
         if cache_key in self.cache:
@@ -3902,7 +3902,7 @@ class SAM2VideoPredictor(SAM2Base):
                 obj_out["maskmem_pos_enc"] = [x[obj_slice] for x in maskmem_pos_enc]
             obj_output_dict[storage_key][frame_idx] = obj_out
 
-    @torch.inference_mode()
+    # REMOVED for training
     def propagate_in_video_preflight(self, inference_state):
         """Prepare inference_state and consolidate temporary outputs before tracking."""
         # Tracking has started and we don't allow adding new objects until session is reset.
@@ -3974,7 +3974,7 @@ class SAM2VideoPredictor(SAM2Base):
         # with language embd as input, there may not be point or box
         # assert all_consolidated_frame_inds == input_frames_inds
 
-    @torch.inference_mode()
+    # REMOVED for training
     def propagate_in_video(
         self,
         inference_state,

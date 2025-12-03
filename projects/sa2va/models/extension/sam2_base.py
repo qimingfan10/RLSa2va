@@ -161,8 +161,13 @@ class SAM2Base(_SAM2Base):
         B = backbone_features.size(0)
         device = backbone_features.device
         assert backbone_features.size(1) == self.sam_prompt_embed_dim
-        assert backbone_features.size(2) == self.sam_image_embedding_size
-        assert backbone_features.size(3) == self.sam_image_embedding_size
+        # Relax assertion to support different image sizes (512, 1024, etc.)
+        # assert backbone_features.size(2) == self.sam_image_embedding_size
+        # assert backbone_features.size(3) == self.sam_image_embedding_size
+        actual_size = backbone_features.size(2)
+        if actual_size != self.sam_image_embedding_size:
+            # Update the embedding size dynamically based on input
+            self.sam_image_embedding_size = actual_size
 
         # a) Handle point prompts
         if point_inputs is not None:

@@ -58,11 +58,22 @@ class InternVLMLLM(InternVL_V1_5):
     def add_special_tokens(self, tokenizer, special_tokens: List[str]) -> None:
         """Add special tokens to the tokenizer and resize embeddings if needed."""
         print_log(f'{self.__class__.__name__}:add_special_tokens [Before] The total number of tokens is now {len(tokenizer)}', logger='current')
+        
+        # 获取当前模型embedding大小
+        current_embed_size = self.model.language_model.get_input_embeddings().weight.shape[0]
+        print_log(f'{self.__class__.__name__}:add_special_tokens Model embedding size: {current_embed_size}', logger='current')
+        
         num_new_tokens = tokenizer.add_tokens(special_tokens, special_tokens=True)
-        if num_new_tokens > 0:
-            self.model.language_model.resize_token_embeddings(len(tokenizer))
-            print_log(f'{self.__class__.__name__}:add_special_tokens Added {num_new_tokens} special tokens', logger='current')
-            print_log(f'{self.__class__.__name__}:add_special_tokens [After] The total number of tokens is now {len(tokenizer)}', logger='current')
+        
+        # 检查是否需要resize（tokenizer大小超过模型embedding）
+        need_resize = len(tokenizer) > current_embed_size
+        
+        if num_new_tokens > 0 or need_resize:
+            if need_resize:
+                print_log(f'{self.__class__.__name__}:add_special_tokens Tokenizer ({len(tokenizer)}) > embedding ({current_embed_size}), need resize', logger='current')
+            # 使用mean_resizing=False来减少内存使用
+            self.model.language_model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+            print_log(f'{self.__class__.__name__}:add_special_tokens Resized embeddings to {len(tokenizer)}', logger='current')
         self.tokenizer = tokenizer
 
 

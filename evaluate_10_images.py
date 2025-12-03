@@ -174,12 +174,14 @@ for idx, sample in enumerate(test_samples):
     try:
         text = "<image>Please segment the blood vessel."
         
-        result = model.predict_forward(
-            image=image,
-            text=text,
-            tokenizer=tokenizer,
-            processor=None,
-        )
+        # 推理时使用no_grad上下文管理器（不是装饰器）
+        with torch.no_grad():
+            result = model.predict_forward(
+                image=image,
+                text=text,
+                tokenizer=tokenizer,
+                processor=None,
+            )
         
         prediction_text = result.get('prediction', '')
         print(f"  📝 模型输出: {prediction_text}")

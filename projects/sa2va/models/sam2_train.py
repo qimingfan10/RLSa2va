@@ -84,6 +84,25 @@ class SAM2TrainRunner(BaseModule):
             pix_feat_with_mem = pix_feat_with_mem.permute(1, 2, 0).view(B, C, H, W)
         else:
             raise NotImplementedError("directly add no memory embedding is not implemented")
+        
+        # Resize feature map to match expected SAM2 embedding size if needed
+        expected_size = self.sam2_model.sam_image_embedding_size
+        if H != expected_size or W != expected_size:
+            import torch.nn.functional as F
+            pix_feat_with_mem = F.interpolate(
+                pix_feat_with_mem, 
+                size=(expected_size, expected_size), 
+                mode='bilinear', 
+                align_corners=False
+            )
+            # Also resize high_res_features
+            if high_res_features is not None:
+                high_res_features = [
+                    F.interpolate(feat, size=(feat.size(2) * expected_size // H, feat.size(3) * expected_size // W), 
+                                  mode='bilinear', align_corners=False)
+                    for feat in high_res_features
+                ]
+        
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
             _, _, _, low_res_masks, high_res_masks, obj_ptr, _, = self.sam2_model._forward_sam_heads(
                 backbone_features=pix_feat_with_mem,

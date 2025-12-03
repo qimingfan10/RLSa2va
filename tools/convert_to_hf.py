@@ -62,6 +62,19 @@ def main():
 
     iter_str = os.path.basename(args.pth_model).split('.')[0]
 
+    # 修复: 确保language_model有modules_to_save属性 (解决8B模型转换问题)
+    # xtuner会调用get_peft_model_state_dict(self.model.language_model)
+    # 需要确保language_model有这个属性
+    try:
+        if hasattr(model.mllm, 'model'):
+            if hasattr(model.mllm.model, 'language_model'):
+                model.mllm.model.language_model.modules_to_save = None
+            if hasattr(model.mllm.model, 'vision_model'):
+                model.mllm.model.vision_model.modules_to_save = None
+            model.mllm.model.modules_to_save = None
+    except Exception as e:
+        print(f"Warning: Could not set modules_to_save: {e}")
+
     model._merge_lora()
 
     model.mllm.model.modules_to_save = None

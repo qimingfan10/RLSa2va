@@ -217,3 +217,27 @@ demo/outputs/
 sa2va_eval/
 comparison_*/
 merged_dataset_predictions/
+
+# LoRA训练输出（权重文件）
+lora_ppo_training/output/
+lora_ppo_training/output_v2/
+lora_ppo_training/*.log
+lora_ppo_training/__pycache__/
+lora_ppo_training/=*
+
+# RL Prompt优化输出
+rl_prompt_optimization/outputs/
+rl_prompt_optimization/evaluations/
+rl_prompt_optimization/logs/
+rl_prompt_optimization/*.log
+rl_prompt_optimization/__pycache__/
+rl_prompt_optimization/env/
+
+# 视频数据
+Segment_DATA_Videos_512/
+
+# 其他大文件
+*.safetensors
+*.bin
+*.pth
+*.pt
